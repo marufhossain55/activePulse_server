@@ -13,5 +13,13 @@ const coresOptions = {
 //............................//\
 app.use(cors(coresOptions));
 app.use(express.json());
-app.use(cookieParser());
+// app.use(cookieParser());
 //<---------------middleware--------------->//
+
+app.get('/', (req, res) => {
+  res.send('ActivePulse is running');
+});
+
+app.listen(port, () => {
+  console.log(`active pulse is running on port ${port}`);
+});
