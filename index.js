@@ -11,7 +11,9 @@ const coresOptions = {
   credentials: true,
   optionSuccessStatus: 200,
 };
-//............................//\
+
+//............................//
+
 app.use(cors(coresOptions));
 app.use(express.json());
 // app.use(cookieParser());
@@ -32,6 +34,17 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const userCollection = client.db('activePulse').collection('users');
+
+    //<-------user related api--------->
+
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+    //<-------user related end--------->
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
