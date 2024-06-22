@@ -14,7 +14,6 @@ const coresOptions = {
 };
 
 //............................//
-//fdsal;fkdasl;fkasd;lfkjfasdk;fjasdklfjasldkjfjfhnsad
 app.use(cors(coresOptions));
 app.use(express.json());
 // app.use(cookieParser());
