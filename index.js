@@ -3,12 +3,13 @@ const cors = require('cors');
 const app = express();
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 ////////////////////
 const port = process.env.PORT || 5000;
 //<----middleware--->
 const coresOptions = {
   origin: ['http://localhost:5173'],
+  // origin: ['https://bright-custard-f0624f.netlify.app'],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -35,6 +36,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db('activePulse').collection('users');
+    const newsletterCollection = client
+      .db('activePulse')
+      .collection('newsletter');
 
     //<----------jwt related api---------->
     app.post('/jwt', async (req, res) => {
@@ -80,7 +84,7 @@ async function run() {
     //<-------user related end--------->
 
     //<----------admin related api----------->
-    app.get('/users/admin/:email', verifyToken, async (req, res) => {
+    app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
       if (email != req.decoded.email) {
         return res.status(403).send({ message: 'unauthorized access' });
@@ -95,13 +99,53 @@ async function run() {
     });
     //<----------admin related api end----------->
 
-    //<-------all trainer--------->
-    app.get('/allTrainers', verifyToken, async (req, res) => {
+    //<----------use verify admin after verifyToken----------->
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role == 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    };
+    //<----------verify admin end----------->
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    app.post('/newsLetter', async (req, res) => {
+      const data = req.body;
+      const result = await newsletterCollection.insertOne(data);
+      res.send(result);
+    });
+
+    ////////////////////////////////
+    app.get('/subcribeNewsLetter', async (req, res) => {
+      const result = await newsletterCollection.find().toArray();
+      res.send(result);
+    });
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    //<-------all trainer  , verifyToken--------->
+    app.get('/allTrainers', async (req, res) => {
       const query = { role: 'trainer' };
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
     //<-------all trainer end--------->
+
+    //<-------all trainer modifier------------->
+    app.patch('/allTrainers/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { role: 'member' } };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    //<-------all trainer modifier end------------->
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
@@ -139,3 +183,4 @@ app.listen(port, () => {
  * app.delete('/users/:id')
  *
  */
+////////////////////////////dumb//////////////////////////
