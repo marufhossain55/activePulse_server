@@ -46,6 +46,18 @@ async function run() {
     });
     //<----------jwt related api---------->
 
+    //<--------middlewares----------->
+    const verifyToken = (req, res, next) => {
+      console.log('inside verify token', req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'forbidden access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      // next();
+    };
+
+    //<--------middlewares end----------->
+
     //<-------user related api--------->
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -62,7 +74,7 @@ async function run() {
     //<-------user related end--------->
 
     //<-------all trainer--------->
-    app.get('/allTrainers', async (req, res) => {
+    app.get('/allTrainers', verifyToken, async (req, res) => {
       const query = { role: 'trainer' };
       const result = await userCollection.find(query).toArray();
       res.send(result);
