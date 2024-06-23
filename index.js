@@ -243,6 +243,7 @@ const port = process.env.PORT || 5000;
 
 const corsOptions = {
   origin: ['http://localhost:5173'],
+  // origin: ['https://bright-custard-f0624f.netlify.app'],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -304,7 +305,7 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
-
+    //<------------------------------------------------->
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
       if (email != req.decoded.email) {
@@ -325,6 +326,56 @@ async function run() {
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role == 'admin';
       if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    };
+    //<------------------------------------------>
+    app.get('/users/trainer/:email', async (req, res) => {
+      const email = req.params.email;
+      if (email != req.decoded.email) {
+        return res.status(403).send({ message: 'unauthorized access' });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let trainer = false;
+      if (user) {
+        trainer = user.role === 'trainer';
+      }
+      res.send({ trainer });
+    });
+
+    const verifyTrainer = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isTrainer = user?.role == 'trainer';
+      if (!isTrainer) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    };
+    //<------------------------------------------>
+    app.get('/users/member/:email', async (req, res) => {
+      const email = req.params.email;
+      if (email != req.decoded.email) {
+        return res.status(403).send({ message: 'unauthorized access' });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let member = false;
+      if (user) {
+        member = user.role === 'member';
+      }
+      res.send({ member });
+    });
+
+    const verifyMember = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isMember = user?.role == 'member';
+      if (!isMember) {
         return res.status(403).send({ message: 'forbidden access' });
       }
       next();
