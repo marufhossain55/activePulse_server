@@ -169,7 +169,7 @@ async function run() {
     });
     //<------------------apply for trainer end----------------->
 
-    //<------------------------aid code----------------------->
+    //<------------------------aid code(apply trainer approve)----------------------->
 
     app.post('/confirmTrainer/:email', async (req, res) => {
       const email = req.params.email;
@@ -182,7 +182,15 @@ async function run() {
       res.send(result);
     });
 
-    //<------------------------aid code end-------------------->
+    //<------------------------aid code end((apply trainer approve))-------------------->
+
+    //<--------------------applied For Trainer------------------------>
+    app.get('/appliedForTrainer', async (req, res) => {
+      const result = await applicationCollection.find().toArray();
+      res.send(result);
+    });
+
+    //<--------------------Applied for trainer end-------------------->
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
