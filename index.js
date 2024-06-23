@@ -3,6 +3,8 @@ const cors = require('cors');
 const app = express();
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 ////////////////////
 const port = process.env.PORT || 5000;
@@ -39,6 +41,11 @@ async function run() {
     const newsletterCollection = client
       .db('activePulse')
       .collection('newsletter');
+    const classCollection = client.db('activePulse').collection('classes');
+
+    const applicationCollection = client
+      .db('activePulse')
+      .collection('appliedTrainers');
 
     //<----------jwt related api---------->
     app.post('/jwt', async (req, res) => {
@@ -146,6 +153,36 @@ async function run() {
       res.send(result);
     });
     //<-------all trainer modifier end------------->
+
+    //<--------------added class by admin---------------->
+    app.post('/addedClass', async (req, res) => {
+      const data = req.body;
+      const result = await classCollection.insertOne(data);
+      res.send(result);
+    });
+    //<--------------added class by admin end-------------->
+
+    //<------------------apply for trainer----------------->
+    app.get('/applyForTrainer', async (req, res) => {
+      result = await applicationCollection.find().toArray();
+      res.send(result);
+    });
+    //<------------------apply for trainer end----------------->
+
+    //<------------------------aid code----------------------->
+
+    app.post('/confirmTrainer/:email', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      result = await userCollection.updateOne(
+        { email },
+        { $set: { role: 'trainer' } }
+      );
+      await applicationCollection.deleteOne({ email });
+      res.send(result);
+    });
+
+    //<------------------------aid code end-------------------->
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
