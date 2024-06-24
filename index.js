@@ -272,7 +272,13 @@ async function run() {
       .db('activePulse')
       .collection('appliedTrainers');
     const slotCollection = client.db('activePulse').collection('slots');
+    const trainerCollection = client.db('activePulse').collection('trainers');
+    const trainerApplicationCollection = client
+      .db('activePulse')
+      .collection('trainerApplications');
+    const bookingCollection = client.db('activePulse').collection('bookings');
 
+    //jwt related api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -281,14 +287,28 @@ async function run() {
       res.send({ token });
     });
 
+    // const verifyToken = (req, res, next) => {
+    //   if (!req.headers.authorization) {
+    //     return res.status(401).send({ message: 'unauthorized access' });
+    //   }
+    //   const token = req.headers.authorization.split(' ')[1];
+    //   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    //     if (err) {
+    //       return res.status(401).send({ message: 'forbidden access' });
+    //     }
+    //     req.decoded = decoded;
+    //     next();
+    //   });
+    // };
     const verifyToken = (req, res, next) => {
+      // console.log('inside verify token', req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: 'unauthorized access' });
       }
       const token = req.headers.authorization.split(' ')[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: 'forbidden access' });
+          return res.status(401).send({ message: 'unauthorized access' });
         }
         req.decoded = decoded;
         next();
@@ -306,16 +326,32 @@ async function run() {
       res.send(result);
     });
     //<------------------------------------------------->
+    // app.get('/users/admin/:email', verifyToken, async (req, res) => {
+    //   const email = req.params.email;
+    //   if (email != req.decoded.email) {
+    //     return res.status(403).send({ message: 'unauthorized access' });
+    //   }
+    //   const query = { email: email };
+    //   const user = await userCollection.findOne(query);
+    //   let admin = false;
+    //   if (user) {
+    //     admin = user?.role === 'admin';
+    //   }
+    //   res.send({ admin });
+    // });
+
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
-      if (email != req.decoded.email) {
-        return res.status(403).send({ message: 'unauthorized access' });
-      }
+
+      // if (email !== req.decoded.email) {
+      //   return res.status(403).send({ message: 'forbidden access' });
+      // }
+
       const query = { email: email };
       const user = await userCollection.findOne(query);
       let admin = false;
       if (user) {
-        admin = user.role === 'admin';
+        admin = user?.role === 'admin';
       }
       res.send({ admin });
     });
@@ -333,9 +369,9 @@ async function run() {
     //<------------------------------------------>
     app.get('/users/trainer/:email', async (req, res) => {
       const email = req.params.email;
-      if (email != req.decoded.email) {
-        return res.status(403).send({ message: 'unauthorized access' });
-      }
+      // if (email != req.decoded.email) {
+      //   return res.status(403).send({ message: 'unauthorized access' });
+      // }
       const query = { email: email };
       const user = await userCollection.findOne(query);
       let trainer = false;
@@ -358,9 +394,9 @@ async function run() {
     //<------------------------------------------>
     app.get('/users/member/:email', async (req, res) => {
       const email = req.params.email;
-      if (email != req.decoded.email) {
-        return res.status(403).send({ message: 'unauthorized access' });
-      }
+      // if (email != req.decoded.email) {
+      //   return res.status(403).send({ message: 'unauthorized access' });
+      // }
       const query = { email: email };
       const user = await userCollection.findOne(query);
       let member = false;
@@ -380,7 +416,7 @@ async function run() {
       }
       next();
     };
-
+    //<------------------------------------------>
     app.post('/newsLetter', async (req, res) => {
       const data = req.body;
       const result = await newsletterCollection.insertOne(data);
@@ -510,6 +546,113 @@ async function run() {
         res.status(500).send({ message: 'Internal server error' });
       }
     });
+
+    /////////////////////////////////////////////////////////////////
+    // Get all trainers
+    app.get('/api/trainers', async (req, res) => {
+      try {
+        const trainers = await trainerCollection.find().toArray();
+        res.json(trainers);
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: 'Error fetching trainers', error: error.message });
+      }
+    });
+
+    // Get a specific trainer
+    app.get('/api/trainers/:id', async (req, res) => {
+      try {
+        const trainer = await trainerCollection.findOne({
+          _id: new ObjectId(req.params.id),
+        });
+        if (!trainer) {
+          return res.status(404).json({ message: 'Trainer not found' });
+        }
+        res.json(trainer);
+      } catch (error) {
+        res.status(500).json({
+          message: 'Error fetching trainer details',
+          error: error.message,
+        });
+      }
+    });
+
+    // Submit an application to become a trainer
+    app.post('/api/become-trainer', async (req, res) => {
+      try {
+        const result = await trainerApplicationCollection.insertOne(req.body);
+        res.status(201).json({
+          message: 'Application submitted successfully',
+          id: result.insertedId,
+        });
+      } catch (error) {
+        res.status(500).json({
+          message: 'Error submitting application',
+          error: error.message,
+        });
+      }
+    });
+
+    // Get details of a specific slot
+    app.get('/api/slots/:trainerId/:slotId', async (req, res) => {
+      try {
+        const slot = await slotCollection.findOne({
+          _id: new ObjectId(req.params.slotId),
+          trainerId: new ObjectId(req.params.trainerId),
+        });
+        if (!slot) {
+          return res.status(404).json({ message: 'Slot not found' });
+        }
+        res.json(slot);
+      } catch (error) {
+        res.status(500).json({
+          message: 'Error fetching slot details',
+          error: error.message,
+        });
+      }
+    });
+
+    // Book a specific slot
+    app.post('/api/book/:trainerId/:slotId', async (req, res) => {
+      try {
+        // Check if the slot is available
+        const slot = await slotCollection.findOne({
+          _id: new ObjectId(req.params.slotId),
+          trainerId: new ObjectId(req.params.trainerId),
+          isBooked: false,
+        });
+
+        if (!slot) {
+          return res.status(400).json({ message: 'Slot is not available' });
+        }
+
+        // Create the booking
+        const booking = {
+          trainerId: new ObjectId(req.params.trainerId),
+          slotId: new ObjectId(req.params.slotId),
+          userId: req.body.userId, // Assuming you're passing the user ID in the request body
+          bookingDate: new Date(),
+        };
+
+        const result = await bookingCollection.insertOne(booking);
+
+        // Update the slot to mark it as booked
+        await slotCollection.updateOne(
+          { _id: new ObjectId(req.params.slotId) },
+          { $set: { isBooked: true } }
+        );
+
+        res
+          .status(201)
+          .json({ message: 'Booking confirmed', id: result.insertedId });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: 'Error booking slot', error: error.message });
+      }
+    });
+    /////////////////////////////////////////////////////////////////
 
     await client.db('admin').command({ ping: 1 });
     console.log(
